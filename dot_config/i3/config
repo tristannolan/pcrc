@@ -214,5 +214,3 @@ exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 exec --no-startup-id ~/.fehbg
 exec --no-startup-id solaar --window=hide
 exec --no-startup-id openrgb --profile ~/.config/OpenRGB/tristannolan.orp --startminimized
-
-# modifying config once again
