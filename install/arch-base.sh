@@ -1,24 +1,23 @@
 #!/bin/bash
+set -euo pipefail
 
 # Usage
 # Create a bootable usb drive with an arch iso
 # Boot the vm/pc
-
-# curl https://raw.githubusercontent.com/tristannolan/dotfiles/refs/heads/main/install/arch-base.sh -o arch-base.sh
-# vim arch-base.sh
-# chmod +x arch-base.sh
-# ./arch-base.sh
+# curl to download raw file
+# Configure and run
 
 ##############
-#  Settings  #
+#  SETTINGS  #
 ##############
 mode=safe
 
 keyboard_layout=us
 boot_mode=""
+network_available=false
 
 ###############
-#  Arguments  #
+#  ARGUMENTS  #
 ###############
 
 usage() {
@@ -34,14 +33,18 @@ while getopts ":hm:" opt; do
 			;;
 		m)
 			case "${OPTARG}" in
-				safe|dry|live) mode="${OPTARG}" ;;
-				*) mode="safe" ;;
+				safe|dry|live) 
+					mode="${OPTARG}" 
+					;;
+				*) 
+					echo "Invalid Mode: $OPTARG"
+					usage
+					exit 1
+					;;
 			esac
 			;;
 		*)
-			if [ -n "${OPTARG}" ]; then
-				echo "Invalid argument: ${OPTARG}"
-			fi
+			echo "Invalid Argument: ${OPTARG}"
 			usage
 			exit 1
 		;;
@@ -50,12 +53,12 @@ done
 shift $((OPTIND - 1))
 
 ###############
-#  Functions  #
+#  FUNCTIONS  #
 ###############
 
 abort() {
-	reason=$1
-	info=$2
+	local reason=${1:-}
+	local info=${2:-}
 
 	if [ -z "$reason" ]; then
 		echo "Aborting"
@@ -69,35 +72,21 @@ abort() {
 	exit 1
 }
 
-run_if_live() {
-	if [ "$mode" != "live" ]; then
-		return
-	fi
+#########
+#  DRY  #
+#########
 
-	cmd=$1
-
-	if [ -z "$cmd" ]; then
-		abort "Attempted to execute empty command"
-	fi
-
-	$cmd
-}
-
-#############
-#  Execute  #
-#############
-
-if [ "$mode" == "safe" ]; then
+if [ "$mode" = "safe" ]; then
 	abort "Will not run in safe mode" "Please review and modify settings before continuing"
 fi
 
 # Keyboard layout
 echo "Keyboard Layout: $keyboard_layout"
-run_if_live "loadkeys $keyboard_layout"
 
 # Boot Mode
 if [ -d /sys/firmware/efi ]; then
-	case $(cat /sys/firmware/efi/fw_platform_size) in
+	fw_size=$(cat /sys/firmware/efi/fw_platform_size)
+	case "$fw_size" in
 		64)
 			echo "Boot Mode: 64-bit x64 UEFI"
 			boot_mode="uefi"
@@ -113,3 +102,33 @@ else
 	echo "Boot Mode: BIOS"
 	boot_mode="bios"
 fi
+
+# Internet
+if ping -c 1 8.8.8.8 &> /dev/null; then
+	echo "Network Available"
+	network_available=true
+else
+	abort "Network unavailable" "Please review device and installer config"
+fi
+
+##########
+#  LIVE  #
+##########
+
+if [ "$mode" = "dry" ]; then
+	echo "Exiting Dry Run - No commands have been run"
+	exit 0
+fi
+
+if [ "$mode" = "live" ]; then
+	read -r -p "Proceed with live installation? [y/N]: " confirm
+	case "$confirm" in
+		y|Y|yes|YES) ;;
+		*) abort "User aborted"
+	esac
+fi
+
+loadkeys $keyboard_layout
+timedatectl
+
+# create partitions here
