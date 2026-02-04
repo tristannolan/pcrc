@@ -7,51 +7,51 @@
 # curl https://raw.githubusercontent.com/tristannolan/dotfiles/refs/heads/main/install/arch-base.sh -o arch-base.sh
 # vim arch-base.sh
 # chmod +x arch-base.sh
-# ./arch-base.sh safe
+# ./arch-base.sh
 
 ##############
 #  Settings  #
 ##############
-safe_to_run=false
-live=false
-
-mode_live=false			# commands won't run unless live
-mode_safe=false			# protection against accidental curl run on bare metal
-
-mode=safe	# safe|dry|unsafe|live
+mode=safe
 
 keyboard_layout=us
 
 ###############
 #  Arguments  #
 ###############
-case "$1" in
-	live)
-		live_mode=true
-		;;
-	dry)
-		live_mode=false
-		;;
-	*)
-	live_mode=$live
-	;;
-esac
 
-case "$2" in
-	unsafe)
-		safe_mode=false
+usage() {
+	echo "Usage: $0 [options...]"
+	echo "-m	safe|dry|live"
+}
+
+while getopts ":hm:" opt; do
+	case "${opt}" in
+		h)
+			usage
+			exit 0
+			;;
+		m)
+			case "${OPTARG}" in
+				safe|dry|live) mode="${OPTARG}" ;;
+				*) mode="safe" ;;
+			esac
+			;;
+		*)
+			if [ -n "${OPTARG}" ]; then
+				echo "Invalid argument: ${OPTARG}"
+			fi
+			usage
+			exit 1
 		;;
-	safe)
-		safe_mode=true
-		;;
-	*)
-	safe_mode=$safe_to_run
-	;;
-esac
+	esac
+done
+shift $((OPTIND - 1))
 
 ###############
 #  Functions  #
 ###############
+
 abort() {
 	reason=$1
 	info=$2
@@ -69,7 +69,7 @@ abort() {
 }
 
 run_if_live() {
-	if [ "$live_mode" != "true" ]; then
+	if [ "$mode" != "live" ]; then
 		return
 	fi
 
@@ -86,14 +86,13 @@ run_if_live() {
 #  Execute  #
 #############
 
-# Safety net
-if [ "$safe_to_run" != "true" ] && [ "$safe_mode" != "true" ]; then
-	abort "Not safe to run" "Please review and modify settings before continuing"
+if [ "$mode" == "safe" ]; then
+	abort "Will not run in safe mode" "Please review and modify settings before continuing"
 fi
 
 # Keyboard layout
 echo "Keyboard Layout: $keyboard_layout"
-run_if_live "loadkeys es"
+run_if_live "loadkeys $keyboard_layout"
 
 # Boot Mode
 case $(cat /sys/firmware/efi/fw_platform_size) in
