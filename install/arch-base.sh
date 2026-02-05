@@ -73,6 +73,20 @@ abort() {
 	exit 1
 }
 
+confirm() {
+	local question=${1:-}
+
+	if [ -z "$question" ]; then
+		abort "confirm()" "No question string provided"
+	fi
+
+	read -r -p "$question [y/N]: " confirm
+	case "$confirm" in
+		y|Y|yes|YES) echo "true" ;;
+		*) echo "false" ;;
+	esac
+}
+
 #########
 #  DRY  #
 #########
@@ -94,7 +108,7 @@ fi
 
 # Boot Mode
 if [ -d /sys/firmware/efi ]; then
-	fw_size=$(cat /sys/firmware/efi/fw_platform_size)
+	read -r fw_size < /sys/firmware/efi/fw_platform_size
 	case "$fw_size" in
 		64)
 			echo "Boot Mode: 64-bit x64 UEFI"
@@ -113,11 +127,11 @@ else
 fi
 
 # Select a drive to partition
-mapfile -t drives < <(lsblk -dn -o NAME,TYPE,MOUNTPOINTS | awk '$2=="disk" && $1!="zram0" { print $1 }')
+mapfile -t drives < <(lsblk -dn -o NAME,TYPE | awk '$2=="disk" { print $1 }')
 
 safe_drives=()
 for d in "${drives[@]}"; do
-	if ! lsblk -nr -o MOUNTPOINTS "/dev/$d" | grep -q .; then
+	if ! lsblk -nr -o MOUNTPOINTS "/dev/$d" | grep -q '[^[:space:]]'; then
 		safe_drives+=("$d")
 	fi
 done
@@ -145,11 +159,13 @@ while [ -z "$drive" ]; do
 		continue
 	fi
 
-	drive="${safe_drives[${drive_num}]}"
-	echo "You have selected drive ${drive_num}: ${drive}"
-done
+	#echo "You have selected drive ${drive_num}: ${drive}"
+	if [[ $(confirm "Proceed with ${drive_num}: /dev/${drive}?") == "false" ]]; then
+		continue
+	fi
 
-exit 1
+	drive="${safe_drives[${drive_num}]}"
+done
 
 ##########
 #  LIVE  #
@@ -160,11 +176,9 @@ if [ "$mode" = "dry" ]; then
 	exit 0
 fi
 
-read -r -p "Proceed with live installation? [y/N]: " confirm
-case "$confirm" in
-	y|Y|yes|YES) ;;
-	*) abort "User aborted"
-esac
+if [[ $(confirm "Proceed with live installation?") == "false" ]]; then
+	abort "User aborted"
+fi
 
 loadkeys $keyboard_layout
 timedatectl set-ntp true
