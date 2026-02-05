@@ -1,11 +1,18 @@
 #!/bin/bash
 set -euo pipefail
 
-# Usage
-# Create a bootable usb drive with an arch iso
-# Boot the vm/pc
-# curl to download raw file
-# Configure and run
+###############
+#  CONSTANTS  #
+###############
+FORMAT_EFI=ef00
+FORMAT_BIOS_BOOT=ef02
+FORMAT_LINUX_SWAP=8200
+FORMAT_LINUX_FILESYSTEM=8300
+
+BOOT_MODE_UEFI=uefi
+BOOT_MODE_BIOS=bios
+
+DEFAULT_TIMEZONE=Africa/Johannesburg
 
 ##############
 #  SETTINGS  #
@@ -13,22 +20,33 @@ set -euo pipefail
 mode=safe
 unsafe=false
 
-memory_real_size_mb=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
-drive_real_size_mb=$(lsblk -nbd -o SIZE /dev/sda | awk '{printf "%.0f\n", $1/1024/1024}')
-
-drive_format_efi=ef00
-drive_format_linux_swap=8200
-drive_format_linux_filesystem=8300
-
 keyboard_layout=us
 network_available=false
 boot_mode=""
 drive=""
-partition_format_boot=$drive_format_efi
-partition_format_swap=$drive_format_linux_swap
-partition_format_system=$drive_format_linux_filesystem
-partition_size_boot=512M
+hostname=""
+
 partition_size_swap=""
+
+packages_common=(
+	linux
+	linux-lts
+	linux-firmware
+	base
+	vim
+	networkmanager
+	dhcpcd
+	netctl
+	wpa_supplicant
+	dialog
+)
+packages_uefi=(
+	systemd-boot
+	efibootmgr
+)
+packages_bios=(
+	grub
+)
 
 ###############
 #  ARGUMENTS  #
@@ -106,18 +124,9 @@ confirm() {
 
 	read -r -p "$question [y/N]: " answer
 	case "$answer" in
-		y|Y|yes|YES) echo "true" ;;
-		*) echo "false" ;;
+		y|Y|yes|YES)	return 0 ;;
+		*)				return 1 ;;
 	esac
-}
-
-run_if_live() {
-	if [ "$mode" != "live" ]; then
-		echo -e "\nABORT - Last fallback before accidental command execution"
-		echo "Please urgently review safety features in script"
-		exit 1
-	fi
-	"$@"
 }
 
 #########
@@ -139,26 +148,6 @@ else
 	abort "Network unavailable" "Please review device and installer config"
 fi
 
-# Swap partition size
-max_swap=$(($drive_real_size_mb * 10 / 100))
-
-# What's the goal?
-# No more than 2x memory
-# No more than 10% drive space
-
-if (( memory_real_size_mb * 2 < max_swap)); then
-	partition_size_swap="$((memory_real_size_mb * 2))M"
-else
-	partition_size_swap="${max_swap}M"
-fi
-
-echo
-echo "Real Memory Size:	${memory_real_size_mb}M"
-echo "Real Drive Size:	${drive_real_size_mb}M"
-echo
-echo "Partition Swap Size:	$partition_size_swap"
-echo "Partition Boot Size:	$partition_size_boot"
-
 # Boot Mode
 echo
 if [ -d /sys/firmware/efi ]; then
@@ -166,7 +155,7 @@ if [ -d /sys/firmware/efi ]; then
 	case "$fw_size" in
 		64)
 			echo "Boot Mode: 64-bit x64 UEFI"
-			boot_mode="uefi"
+			boot_mode=$BOOT_MODE_UEFI
 			;;
 		32)
 			abort "Automatic install not configured for 32-bit UEFI"
@@ -177,7 +166,7 @@ if [ -d /sys/firmware/efi ]; then
 	esac
 else
 	echo "Boot Mode: BIOS"
-	boot_mode="bios"
+	boot_mode=$BOOT_MODE_BIOS
 fi
 
 # Select a drive to partition
@@ -193,32 +182,54 @@ done
 if [[ "${#safe_drives[@]}" -eq 0 ]]; then
 	lsblk_output=$(lsblk)
 	abort "No drive available" "Please confirm if an unmounted drive is available for partitioning. \n\n${lsblk_output}"
+else
+	while [ -z "$drive" ]; do
+		echo -e "\nAvailable drives:"
+		for i in "${!safe_drives[@]}"; do
+			echo "$i: /dev/${safe_drives[$i]}"
+		done
+
+		read -p "Please select a drive to partition: " drive_num
+
+		if [[ ! "$drive_num" =~ ^[0-9]+$ ]]; then
+			echo "Invalid input"
+			continue
+		fi
+
+		if [[ "$drive_num" -lt 0 || "$drive_num" -ge "${#safe_drives[@]}" ]]; then
+			echo "Selection out of bounds"
+			continue
+		fi
+
+		drive="/dev/${safe_drives[${drive_num}]}"
+
+		if ! confirm "Proceed with ${drive}?"; then
+			drive=""
+			continue
+		fi
+	done
 fi
 
-while [ -z "$drive" ]; do
-	echo -e "\nAvailable drives:"
-	for i in "${!safe_drives[@]}"; do
-		echo "$i: /dev/${safe_drives[$i]}"
-	done
+# Swap partition size
+memory_real_size_mb=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+drive_real_size_mb=$(lsblk -nbd -o SIZE "${drive}" | awk '{printf "%.0f\n", $1/1024/1024}')
 
-	read -p "Please select a drive to partition: " drive_num
+max_swap=$(($drive_real_size_mb * 10 / 100))
 
-	if [[ ! "$drive_num" =~ ^[0-9]+$ ]]; then
-		echo "Invalid input"
-		continue
-	fi
+# The arch wiki recommends at least 4GB for swap
+if (( max_swap < 4 * 1024 )); then
+	partition_size_swap=4G
+elif (( memory_real_size_mb * 2 < max_swap)); then
+	partition_size_swap="$((memory_real_size_mb * 2))M"
+else
+	partition_size_swap="${max_swap}M"
+fi
 
-	if [[ "$drive_num" -lt 0 || "$drive_num" -ge "${#safe_drives[@]}" ]]; then
-		echo "Selection out of bounds"
-		continue
-	fi
-
-	drive="/dev/${safe_drives[${drive_num}]}"
-	if [[ $(confirm "Proceed with ${drive_num}: ${drive}?") == "false" ]]; then
-		drive=""
-		continue
-	fi
-done
+echo
+echo "Real Memory Size:	${memory_real_size_mb}M"
+echo "Real Drive Size:	${drive_real_size_mb}M"
+echo
+echo "Partition Swap Size:	$partition_size_swap"
 
 
 if [ "$mode" = "dry" ]; then
@@ -229,20 +240,151 @@ fi
 #  LIVE  #
 ##########
 
-if [[ $(confirm "Proceed with live installation?") == "false" ]]; then
-	abort "User aborted"
+if [ "$mode" != "live" ]; then
+	abort "Not in live mode" "Please urgently review safety features in script"
 fi
 
-run_if_live loadkeys "$keyboard_layout"
-run_if_live timedatectl set-ntp true
+echo -e "\nProceed with live installation?"
+if ! confirm "WARNING - This could break your computer"; then
+	exit 0
+fi
 
-# Partition
-run_if_live sgdisk --zap-all "${drive}"
-run_if_live sgdisk \
-	-n 1:0:+"$partition_size_boot}"		-t 1:"${partition_format_boot}" \
-	-n 2:0:+"${partition_size_swap}"	-t 2:"${partition_format_swap}" \
-	-n 3:0:0							-t 3:"${partition_format_system}" \
-	"${drive}"
 
-partprobe "$drive"
-lsblk "$drive"
+loadkeys "$keyboard_layout"
+timedatectl set-ntp true
+
+# Partition and format
+case "$boot_mode" in 
+	"${BOOT_MODE_UEFI}")
+		sgdisk --zap-all "$drive"
+		sgdisk \
+			-n 1:0:+512M					-t 1:"$FORMAT_EFI"				\
+			-n 2:0:+"$partition_size_swap"	-t 2:"$FORMAT_LINUX_SWAP"		\
+			-n 3:0:0						-t 3:"$FORMAT_LINUX_FILESYSTEM"	\
+			"$drive"
+
+		partprobe "$drive"
+
+		mkfs.vfat -F32 "${drive}1"
+		mkswap "${drive}2"
+		mkfs.ext4 "${drive}3"
+
+		swapon "${drive}2"
+		mount "${drive}3" /mnt
+		mkdir -p /mnt/boot/efi
+		mount "${drive}1" /mnt/boot/efi
+		;;
+
+	"${BOOT_MODE_BIOS}")
+		sgdisk --zap-all "$drive"
+		sgdisk \
+			-n 1:0:+2M						-t 1:"$FORMAT_BIOS_BOOT"		\
+			-n 2:0:+"$partition_size_swap"	-t 2:"$FORMAT_LINUX_SWAP"		\
+			-n 3:0:0						-t 3:"$FORMAT_LINUX_FILESYSTEM"	\
+			"$drive"
+
+		partprobe "$drive"
+
+		mkswap "${drive}2"
+		mkfs.ext4 "${drive}3"
+
+		swapon "${drive}2"
+		mount "${drive}3" /mnt
+		;;
+esac
+
+# Select a nearby mirror server
+reflector						\
+	-l 20						\
+	--country 'South Africa'	\
+	--age 12					\
+	--protocol https			\
+	--sort rate					\
+	--save /etc/pacman.d/mirrorlist
+command -v reflector >/dev/null || abort "Reflector not available"
+
+# Essential packages
+case "$boot_mode" in
+	"${BOOT_MODE_UEFI}")
+		pacstrap /mnt "${packages_common[@]}" "${packages_uefi[@]}"
+		;;
+	"${BOOT_MODE_BIOS}")
+		pacstrap /mnt "${packages_common[@]}" "${packages_bios[@]}"
+		;;
+esac
+
+genfstab /mnt >> /mnt/etc/fstab
+
+arch-chroot /mnt /bin/bash <<'EOF'
+
+# Hostname
+while [ -z "$hostname" ]; do
+	read -p "Enter a hostname: " hostname
+
+	if (( "${#hostname}" == 0 )); then
+		echo "Hostname cannot be nil"
+		continue
+	fi
+
+	if ! confirm "Proceed with '${hostname}'?"; then
+		continue
+	fi
+
+	break
+done
+
+# Time and location
+timezone=$(curl https://ipapi.co/timezone) || $DEFAULT_TIMEZONE
+ln -sf "/usr/share/zoneinfo/${timezone}" /etc/localtime
+hwclock --systohc
+# set locale?
+locale-gen
+
+echo KEYMAP=es > /etc/wconsole.conf
+echo LANG=es_AR.UTF8 > /etc/local.conf
+
+mkinitcpio -P
+
+# Install Bootloader
+case "$boot_mode" in
+	"${BOOT_MODE_UEFI}")
+		grub-install					\
+			--efi-directory=/boot/efi	\
+			--bootloader				\
+			--id='Arch Linux'			\
+			--target=x86_64-efi
+		grub-mkconfig -o /boot/grub/grub.cfg
+		;;
+	"${BOOT_MODE_BIOS}")
+		grub-install "${drive}"
+		grub-mkconfig -o /boot/grub/grub.cfg
+		;;
+
+esac
+
+# Authentication
+passwd
+
+while [ -z "$username" ]; do
+	read -p "Enter a username: " username
+
+	if (( "${#username}" == 0 )); then
+		echo "Username cannot be nil"
+		continue
+	fi
+
+	if ! confirm "Proceed with '${username}'?"; then
+		continue
+	fi
+
+	break
+done
+
+useradd -m "$username"
+passwd "$username"
+
+# Unmount and reboot
+exit umount -R /mnt
+reboot
+
+EOF
