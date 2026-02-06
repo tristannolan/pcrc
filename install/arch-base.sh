@@ -1,9 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-###############
-#  CONSTANTS  #
-###############
+# Splash screen
+# Gather information
+# Present config
+# Dry: echo commands
+# Live: run commands
+
+###################
+#    CONSTANTS    #
+###################
 FORMAT_EFI=ef00
 FORMAT_BIOS_BOOT=ef02
 FORMAT_LINUX_SWAP=8200
@@ -14,9 +20,9 @@ BOOT_MODE_BIOS=bios
 
 DEFAULT_TIMEZONE=Africa/Johannesburg
 
-##############
-#  SETTINGS  #
-##############
+##################
+#    SETTINGS    #
+##################
 mode=safe
 unsafe=false
 
@@ -25,6 +31,7 @@ network_available=false
 boot_mode=""
 drive=""
 hostname=""
+country="South Africa"
 
 partition_size_swap=""
 
@@ -48,9 +55,9 @@ packages_bios=(
 	grub
 )
 
-###############
-#  ARGUMENTS  #
-###############
+###################
+#    ARGUMENTS    #
+###################
 
 usage() {
 	echo "Usage: $0 [options...]"
@@ -89,9 +96,9 @@ while getopts ":hum:" opt; do
 done
 shift $((OPTIND - 1))
 
-###############
-#  FUNCTIONS  #
-###############
+###################
+#    FUNCTIONS    #
+###################
 
 abort() {
 	local reason=${1:-}
@@ -129,9 +136,9 @@ confirm() {
 	esac
 }
 
-#########
-#  DRY  #
-#########
+#############
+#    DRY    #
+#############
 
 if [ "$mode" = "safe" ]; then
 	abort "Will not run in safe mode" "Please review and modify settings before continuing"
@@ -231,14 +238,79 @@ echo "Real Drive Size:	${drive_real_size_mb}M"
 echo
 echo "Partition Swap Size:	$partition_size_swap"
 
+# Gather Hostname
+while [ -z "$hostname" ]; do
+	read -p "Enter a hostname: " hostname
+
+	if (( "${#hostname}" == 0 )); then
+		echo "Hostname cannot be nil"
+		continue
+	fi
+
+	if ! confirm "Proceed with '${hostname}'?"; then
+		continue
+	fi
+
+	break
+done
+
+# Gather Root Password
+while [ -z "$root_password" ]; do
+	read -p "Enter a root password: " root_password
+
+	if (( "${#root_password}" == 0 )); then
+		echo "Password cannot be nil"
+		continue
+	fi
+
+	if ! confirm "Proceed with '${root_password}'?"; then
+		continue
+	fi
+
+	break
+done
+
+# Gather Username
+while [ -z "$username" ]; do
+	read -p "Enter a username: " username
+
+	if (( "${#username}" == 0 )); then
+		echo "Username cannot be nil"
+		continue
+	fi
+
+	if ! confirm "Proceed with '${username}'?"; then
+		continue
+	fi
+
+	break
+done
+
+# Gather User Password
+while [ -z "$user_password" ]; do
+	read -p "Enter a user password: " user_password
+
+	if (( "${#user_password}" == 0 )); then
+		echo "Password cannot be nil"
+		continue
+	fi
+
+	if ! confirm "Proceed with '${user_password}'?"; then
+		continue
+	fi
+
+	break
+done
+
+timezone=$(curl https://ipapi.co/timezone) || $DEFAULT_TIMEZONE
 
 if [ "$mode" = "dry" ]; then
 	exit 0
 fi
 
-##########
-#  LIVE  #
-##########
+##############
+#    LIVE    #
+##############
 
 if [ "$mode" != "live" ]; then
 	abort "Not in live mode" "Please urgently review safety features in script"
@@ -248,7 +320,6 @@ echo -e "\nProceed with live installation?"
 if ! confirm "WARNING - This could break your computer"; then
 	exit 0
 fi
-
 
 loadkeys "$keyboard_layout"
 timedatectl set-ntp true
@@ -296,7 +367,7 @@ esac
 # Select a nearby mirror server
 reflector						\
 	-l 20						\
-	--country 'South Africa'	\
+	--country '"${country}"'	\
 	--age 12					\
 	--protocol https			\
 	--sort rate					\
@@ -314,54 +385,22 @@ esac
 
 genfstab /mnt >> /mnt/etc/fstab
 
-arch-chroot /mnt /bin/bash <<'EOF'
+arch-chroot /mnt /bin/bash <<EOF
 set -e
 
-# Hostname
-while [ -z "$hostname" ]; do
-	read -p "Enter a hostname: " hostname
-
-	if (( "${#hostname}" == 0 )); then
-		echo "Hostname cannot be nil"
-		continue
-	fi
-
-	if ! confirm "Proceed with '${hostname}'?"; then
-		continue
-	fi
-
-	break
-done
-
-echo "adding hostname"
+echo "setting hostname"
 echo "$hostname" > /etc/hostname
 
-passwd
+# users
+echo "setting root password ${root_password}"
+echo "root:$(root_password)" | chpasswd
 
-while [ -z "$username" ]; do
-	read -p "Enter a username: " username
-
-	if (( "${#username}" == 0 )); then
-		echo "Username cannot be nil"
-		continue
-	fi
-
-	if ! confirm "Proceed with '${username}'?"; then
-		continue
-	fi
-
-	break
-done
-
-useradd -m "$username"
-passwd "$username"
-
-exit 0
+echo "setting user: ${username} ${user_password}"
+echo "${username}:${user_password}" | chpasswd
 
 # working until here
 
 # Time and location
-timezone=$(curl https://ipapi.co/timezone) || $DEFAULT_TIMEZONE
 ln -sf "/usr/share/zoneinfo/${timezone}" /etc/localtime
 hwclock --systohc
 # set locale?
@@ -375,12 +414,6 @@ mkinitcpio -P
 # Install Bootloader
 case "$boot_mode" in
 	"${BOOT_MODE_UEFI}")
-		grub-install					\
-			--efi-directory=/boot/efi	\
-			--bootloader				\
-			--id='Arch Linux'			\
-			--target=x86_64-efi
-		grub-mkconfig -o /boot/grub/grub.cfg
 		;;
 	"${BOOT_MODE_BIOS}")
 		grub-install "${drive}"
@@ -392,6 +425,8 @@ esac
 # Authentication
 # Unmount and reboot
 exit umount -R /mnt
-reboot
+#reboot
+
+echo "unmounted, ready to reboot"
 
 EOF
