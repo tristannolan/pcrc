@@ -369,6 +369,7 @@ case "$boot_mode" in
 esac
 
 # Select a nearby mirror server
+# No mirrors found???
 reflector						\
 	-l 20						\
 	--country "'${country}'"	\
