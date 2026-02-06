@@ -314,7 +314,8 @@ esac
 
 genfstab /mnt >> /mnt/etc/fstab
 
-arch-chroot /mnt /bin/bash
+arch-chroot /mnt /bin/bash <<'EOF'
+set -e
 
 # Hostname
 while [ -z "$hostname" ]; do
@@ -331,6 +332,31 @@ while [ -z "$hostname" ]; do
 
 	break
 done
+
+echo "adding hostname"
+echo "$hostname" > /etc/hostname
+
+passwd
+
+while [ -z "$username" ]; do
+	read -p "Enter a username: " username
+
+	if (( "${#username}" == 0 )); then
+		echo "Username cannot be nil"
+		continue
+	fi
+
+	if ! confirm "Proceed with '${username}'?"; then
+		continue
+	fi
+
+	break
+done
+
+useradd -m "$username"
+passwd "$username"
+
+exit 0
 
 # working until here
 
@@ -364,26 +390,6 @@ case "$boot_mode" in
 esac
 
 # Authentication
-passwd
-
-while [ -z "$username" ]; do
-	read -p "Enter a username: " username
-
-	if (( "${#username}" == 0 )); then
-		echo "Username cannot be nil"
-		continue
-	fi
-
-	if ! confirm "Proceed with '${username}'?"; then
-		continue
-	fi
-
-	break
-done
-
-useradd -m "$username"
-passwd "$username"
-
 # Unmount and reboot
 exit umount -R /mnt
 reboot
