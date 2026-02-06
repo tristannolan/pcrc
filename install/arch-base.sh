@@ -390,48 +390,49 @@ esac
 
 genfstab /mnt >> /mnt/etc/fstab
 
+chroot_commands() {
+	echo "setting hostname"
+	echo "$hostname" > /etc/hostname
+
+	# users
+	echo "setting root password ${root_password}"
+	echo "root:$(root_password)" | chpasswd
+
+	echo "setting user: ${username} ${user_password}"
+	echo "${username}:${user_password}" | chpasswd
+
+	# working until here
+
+	# Time and location
+	ln -sf "/usr/share/zoneinfo/${timezone}" /etc/localtime
+	hwclock --systohc
+	# set locale?
+	#locale-gen
+
+	echo KEYMAP=es > /etc/wconsole.conf
+	echo LANG=es_AR.UTF8 > /etc/local.conf
+
+	mkinitcpio -P
+
+	# Install Bootloader
+	case "$boot_mode" in
+		"${BOOT_MODE_UEFI}")
+			;;
+		"${BOOT_MODE_BIOS}")
+			grub-install "${drive}"
+			grub-mkconfig -o /boot/grub/grub.cfg
+			;;
+	esac
+
+	# Authentication
+	# Unmount and reboot
+	exit umount -R /mnt
+	#reboot
+
+	echo "unmounted, ready to reboot"
+}
+
 arch-chroot /mnt /bin/bash <<EOF
 set -e
-
-echo "setting hostname"
-echo "$hostname" > /etc/hostname
-
-# users
-echo "setting root password ${root_password}"
-echo "root:$(root_password)" | chpasswd
-
-echo "setting user: ${username} ${user_password}"
-echo "${username}:${user_password}" | chpasswd
-
-# working until here
-
-# Time and location
-ln -sf "/usr/share/zoneinfo/${timezone}" /etc/localtime
-hwclock --systohc
-# set locale?
-#locale-gen
-
-echo KEYMAP=es > /etc/wconsole.conf
-echo LANG=es_AR.UTF8 > /etc/local.conf
-
-mkinitcpio -P
-
-# Install Bootloader
-case "$boot_mode" in
-	"${BOOT_MODE_UEFI}")
-		;;
-	"${BOOT_MODE_BIOS}")
-		grub-install "${drive}"
-		grub-mkconfig -o /boot/grub/grub.cfg
-		;;
-
-esac
-
-# Authentication
-# Unmount and reboot
-exit umount -R /mnt
-#reboot
-
-echo "unmounted, ready to reboot"
-
+chroot_commands
 EOF
