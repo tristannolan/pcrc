@@ -301,7 +301,6 @@ reflector						\
 	--protocol https			\
 	--sort rate					\
 	--save /etc/pacman.d/mirrorlist
-command -v reflector >/dev/null || abort "Reflector not available"
 
 # Essential packages
 case "$boot_mode" in
@@ -315,7 +314,7 @@ esac
 
 genfstab /mnt >> /mnt/etc/fstab
 
-arch-chroot /mnt /bin/bash <<'EOF'
+arch-chroot /mnt /bin/bash
 
 # Hostname
 while [ -z "$hostname" ]; do
@@ -333,12 +332,14 @@ while [ -z "$hostname" ]; do
 	break
 done
 
+# working until here
+
 # Time and location
 timezone=$(curl https://ipapi.co/timezone) || $DEFAULT_TIMEZONE
 ln -sf "/usr/share/zoneinfo/${timezone}" /etc/localtime
 hwclock --systohc
 # set locale?
-locale-gen
+#locale-gen
 
 echo KEYMAP=es > /etc/wconsole.conf
 echo LANG=es_AR.UTF8 > /etc/local.conf
