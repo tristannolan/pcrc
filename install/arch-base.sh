@@ -4,6 +4,7 @@ set -euo pipefail
 # Splash screen
 # Gather information
 # Present config
+# Confirm key actions like drive choice and partition
 # Dry: echo commands
 # Live: run commands
 
@@ -31,6 +32,9 @@ network_available=false
 boot_mode=""
 drive=""
 hostname=""
+username=""
+root_password=""
+user_password=""
 country="South Africa"
 
 partition_size_swap=""
