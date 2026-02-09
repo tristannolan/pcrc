@@ -372,7 +372,7 @@ esac
 # No mirrors found???
 reflector						\
 	-l 20						\
-	--country "'${country}'"	\
+	--country "$country"		\
 	--age 12					\
 	--protocol https			\
 	--sort rate					\
@@ -401,15 +401,15 @@ chroot_commands() {
 	echo "setting user: ${username} ${user_password}"
 	echo "${username}:${user_password}" | chpasswd
 
-	# working until here
-
 	# Time and location
 	ln -sf "/usr/share/zoneinfo/${timezone}" /etc/localtime
 	hwclock --systohc
-	# set locale?
-	#locale-gen
 
-	echo KEYMAP=es > /etc/wconsole.conf
+	sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+	locale-gen
+	echo 'LANG=en_US.UTF-8' > /etc/locale.conf
+
+	echo "KEYMAP=$keyboard_layout" > /etc/vconsole.conf
 	echo LANG=es_AR.UTF8 > /etc/local.conf
 
 	mkinitcpio -P
@@ -417,6 +417,7 @@ chroot_commands() {
 	# Install Bootloader
 	case "$boot_mode" in
 		"${BOOT_MODE_UEFI}")
+			bootctl install
 			;;
 		"${BOOT_MODE_BIOS}")
 			grub-install "${drive}"
