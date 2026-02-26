@@ -60,6 +60,7 @@ pacstrap /mnt		\
 	sudo			\
 	man				\
 	git				\
+	zsh				\
 
 genfstab /mnt >> /mnt/etc/fstab
 
