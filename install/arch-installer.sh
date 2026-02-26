@@ -40,20 +40,19 @@ country="South Africa"
 partition_size_swap=""
 
 packages_common=(
-	linux
-	linux-lts
-	linux-firmware
-	base
-	vim
-	networkmanager
-	dhcpcd
-	netctl
-	wpa_supplicant
-	dialog
+	linux \
+	linux-lts \
+	linux-firmware \
+	base \
+	vim \
+	networkmanager \
+	dhcpcd \
+	netctl \
+	wpa_supplicant \
+	dialog \
+	efibootmgr \
 )
 packages_uefi=(
-	systemd-boot
-	efibootmgr
 )
 packages_bios=(
 	grub
@@ -410,7 +409,6 @@ chroot_commands() {
 	echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 
 	echo "KEYMAP=$keyboard_layout" > /etc/vconsole.conf
-	echo LANG=es_AR.UTF8 > /etc/local.conf
 
 	mkinitcpio -P
 
