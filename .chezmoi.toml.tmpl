@@ -1,0 +1,10 @@
+// Prompt input for a variable
+{{- $email := promptString "git email address" -}}
+{{- $profile := promptString "select a config profile (personal|server)" -}}
+
+// Add variables to data
+// Access with .name|.email|.<var>
+[data]
+	name = "Tristan Nolan"
+	email = {{ $email | quote }}
+	profile = {{ $profile | quote }}
