@@ -206,12 +206,21 @@ client.placeholder      $clr_unused $clr_unused $clr_unused $clr_unused $crust
 
 client.background       $crust
 
-# New instance
+# Window management & compositor
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
+# Background image
 exec --no-startup-id ~/.fehbg
+
+# Logitec mouse support
 exec --no-startup-id solaar --window=hide
+
+# OpenRGB profile for hardware LEDs
 exec --no-startup-id openrgb --profile ~/.config/OpenRGB/tristannolan.orp --startminimized
 
+# Keyboard repeat rate
+exec --no-startup-id xset r rate 200 38
+
+# Handles auto-connection for drives
 exec udiskie &

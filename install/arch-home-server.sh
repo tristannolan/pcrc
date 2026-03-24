@@ -61,6 +61,7 @@ pacstrap /mnt		\
 	man				\
 	git				\
 	zsh				\
+	gcc				\
 
 genfstab /mnt >> /mnt/etc/fstab
 
