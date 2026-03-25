@@ -220,7 +220,7 @@ exec --no-startup-id solaar --window=hide
 exec --no-startup-id openrgb --profile ~/.config/OpenRGB/tristannolan.orp --startminimized
 
 # Keyboard repeat rate
-exec --no-startup-id xset r rate 200 38
+exec --no-startup-id xset r rate 210 43
 
 # Handles auto-connection for drives
 exec udiskie &

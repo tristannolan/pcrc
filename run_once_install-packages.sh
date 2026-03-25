@@ -5,13 +5,12 @@ pkg_exists() {
 }
 
 log() {
-	printf "%s: %s\n" "$(date +%H:%M:%S)" "test"
+	printf "%s: %s\n" "$(date +%H:%M:%S)"
 }
 
 log "install packages"
 
-
-if username equals "tristannolan" {
-}
-if hostname contains "server" {
-}
+#if [[ username = tristannolan ]]; then
+#fi
+#if [[ hostname = server ]]; then
+#fi
