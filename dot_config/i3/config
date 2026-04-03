@@ -157,37 +157,39 @@ bindsym $mod+r mode "resize"
 focus_follows_mouse no
 mouse_warping none
 
-# Catppuccin Colours - Mocha
-set $rosewater #f5e0dc
-set $flamingo #f2cdcd
-set $pink #f5c2e7
-set $mauve #cba6f7
-set $red #f38ba8
-set $maroon #eba0ac
-set $peach #fab387
-set $yellow #f9e2af
-set $green #a6e3a1
-set $teal #94e2d5
-set $sky #89dceb
-set $sapphire #74c7ec
-set $blue #89b4fa
-set $lavender #b4befe
-set $text #cdd6f4
-set $subtext1 #bac2de
-set $subtext0 #a6adc8
-set $overlay2 #9399b2
-set $overlay1 #7f849c
-set $overlay0 #6c7086
-set $surface2 #585b70
-set $surface1 #45475a
-set $surface0 #313244
-set $base #1e1e2e
-set $mantle #181825
-set $crust #11111b
+# Empty colour for defaults
+set $clr #00000000
+
+# Catppuccin Mocha
+set $clr_rosewater	#f5e0dc
+set $clr_flamingo	#f2cdcd
+set $clr_pink		#f5c2e7
+set $clr_mauve		#cba6f7
+set $clr_red		#f38ba8
+set $clr_maroon 	#eba0ac
+set $clr_peach		#fab387
+set $clr_yellow 	#f9e2af
+set $clr_green		#a6e3a1
+set $clr_teal		#94e2d5
+set $clr_sky		#89dceb
+set $clr_sapphire	#74c7ec
+set $clr_blue		#89b4fa
+set $clr_lavender	#b4befe
+set $clr_text		#cdd6f4
+set $clr_subtext1	#bac2de
+set $clr_subtext0 	#a6adc8
+set $clr_overlay2 	#9399b2
+set $clr_overlay1 	#7f849c
+set $clr_overlay0 	#6c7086
+set $clr_surface2 	#585b70
+set $clr_surface1 	#45475a
+set $clr_surface0 	#313244
+set $clr_base		#1e1e2e
+set $clr_mantle		#181825
+set $clr_crust		#11111b
 
 # Styles
-set $border_size 2
-set $clr_unused #00000000
+set $border_size 1
 
 gaps inner 8
 gaps top 0
@@ -197,14 +199,14 @@ default_border pixel $border_size
 default_floating_border pixel $border_size
 for_window [class="^.*"] border pixel $border_size
 
-# Color class           border		backgr.		text		indicator	child_border
-client.focused          $clr_unused $clr_unused $clr_unused $pink		$pink
-client.focused_inactive $clr_unused $clr_unused $clr_unused $crust		$crust
-client.unfocused        $clr_unused $clr_unused $clr_unused $clr_unused $crust
-client.urgent           $clr_unused $clr_unused $clr_unused $clr_unused $crust
-client.placeholder      $clr_unused $clr_unused $clr_unused $clr_unused $crust
+# Color class           border	backgr.	text	indicator	child_border
+client.focused          $clr	$clr	$clr	$clr_mauve	$clr_mauve
+client.focused_inactive $clr 	$clr 	$clr 	$clr_base	$clr_base
+client.unfocused        $clr 	$clr 	$clr 	$clr		$clr_crust
+client.urgent           $clr 	$clr 	$clr 	$clr 		$clr_crust
+client.placeholder      $clr 	$clr 	$clr 	$clr 		$clr_crust
 
-client.background       $crust
+client.background       $clr_crust
 
 # Window management & compositor
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
