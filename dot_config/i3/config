@@ -30,8 +30,7 @@ floating_modifier $mod
 tiling_drag modifier titlebar
 
 # start a terminal
-#bindsym $mod+Return exec i3-sensible-terminal
-bindsym $mod+Return exec alacritty
+bindsym $mod+Return exec ghostty
 
 # kill focused window
 bindsym $mod+w kill
@@ -191,7 +190,8 @@ set $border_size 2
 set $clr_unused #00000000
 
 gaps inner 8
-gaps top 39
+gaps top 0
+#gaps top 39
 
 default_border pixel $border_size
 default_floating_border pixel $border_size
@@ -208,7 +208,7 @@ client.background       $crust
 
 # Window management & compositor
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
-exec_always --no-startup-id $HOME/.config/polybar/launch.sh
+#exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
 # Background image
 exec --no-startup-id ~/.fehbg
@@ -220,7 +220,7 @@ exec --no-startup-id solaar --window=hide
 exec --no-startup-id openrgb --profile ~/.config/OpenRGB/tristannolan.orp --startminimized
 
 # Keyboard repeat rate
-exec --no-startup-id xset r rate 210 43
+exec_always --no-startup-id xset r rate 210 38
 
 # Handles auto-connection for drives
 exec udiskie &

@@ -1,3 +1,8 @@
+# Paths
+export PATH=$PATH:/usr/local/bin/bitwarden-cli
+export EDITOR="vim"
+export EDITOR="nvim"
+
 autoload -Uz vcs_info
 autoload -Uz compinit
 
