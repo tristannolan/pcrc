@@ -200,11 +200,11 @@ default_floating_border pixel $border_size
 for_window [class="^.*"] border pixel $border_size
 
 # Color class           border	backgr.	text	indicator	child_border
-client.focused          $clr	$clr	$clr	$clr_mauve	$clr_mauve
-client.focused_inactive $clr 	$clr 	$clr 	$clr_base	$clr_base
-client.unfocused        $clr 	$clr 	$clr 	$clr		$clr_crust
-client.urgent           $clr 	$clr 	$clr 	$clr 		$clr_crust
-client.placeholder      $clr 	$clr 	$clr 	$clr 		$clr_crust
+client.focused          $clr	$clr	$clr	$clr_mauve		$clr_mauve
+client.focused_inactive $clr 	$clr 	$clr 	$clr_surface1	$clr_surface1
+client.unfocused        $clr 	$clr 	$clr 	$clr_surface1	$clr_surface1
+client.urgent           $clr 	$clr 	$clr 	$clr_red		$clr_red
+client.placeholder      $clr 	$clr 	$clr 	$clr_peach		$clr_peach
 
 client.background       $clr_crust
 
