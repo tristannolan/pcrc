@@ -4,13 +4,6 @@ set $mod Mod1
 # https://wiki.archlinux.org/index.php/XDG_Autostart
 exec --no-startup-id dex --autostart --environment i3
 
-# The combination of xss-lock, nm-applet and pactl is a popular choice, so
-# they are included here as an example. Modify as you see fit.
-
-# xss-lock grabs a logind suspend inhibit lock and will use i3lock to lock the
-# screen before suspend. Use loginctl lock-session to lock your screen.
-# exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
-
 # NetworkManager is the most popular way to manage wireless networks on Linux,
 # and nm-applet is a desktop environment-independent system tray GUI for it.
 exec --no-startup-id nm-applet
@@ -80,7 +73,7 @@ bindsym $mod+e layout toggle split
 bindsym $mod+Shift+space floating toggle
 
 # change focus between tiling / floating windows
-bindsym $mod+x focus mode_toggle
+#bindsym $mod+x focus mode_toggle
 
 # focus the parent container
 bindsym $mod+a focus parent
@@ -95,8 +88,6 @@ set $ws2 "2"
 set $ws3 "3"
 set $ws4 "4"
 
-set $ws10 "10:Browser"
-
 # switch to workspace
 bindsym $mod+1 workspace number $ws1
 bindsym $mod+u workspace number $ws1
@@ -109,8 +100,6 @@ bindsym $mod+o workspace number $ws3
 
 bindsym $mod+4 workspace number $ws4
 bindsym $mod+p workspace number $ws4
-
-bindsym $mod+b workspace $ws10
 
 # move focused container to workspace
 bindsym $mod+Shift+1 move container to workspace number $ws1
@@ -125,11 +114,9 @@ bindsym $mod+Shift+o move container to workspace number $ws3
 bindsym $mod+Shift+4 move container to workspace number $ws4
 bindsym $mod+Shift+p move container to workspace number $ws4
 
-bindsym $mod+Shift+b move container to workspace number $ws10
-
 # reload the configuration file
 bindsym $mod+Shift+c reload
-# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+# restart inplace
 bindsym $mod+Shift+r restart
 # exit i3 (logs you out of your X session)
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
@@ -208,6 +195,9 @@ client.placeholder      $clr 	$clr 	$clr 	$clr_peach		$clr_peach
 
 client.background       $clr_crust
 
+# Lock screen
+bindsym $mod+x exec /home/tristannolan/.config/scripts/lock.sh
+
 # Window management & compositor
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf
 #exec_always --no-startup-id $HOME/.config/polybar/launch.sh
@@ -226,3 +216,5 @@ exec_always --no-startup-id xset r rate 210 38
 
 # Handles auto-connection for drives
 exec udiskie &
+
+
